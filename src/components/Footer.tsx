@@ -1,56 +1,104 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Text } from 'react-native-paper';
+import {StyleSheet, TouchableOpacity, View} from 'react-native';
+import {Text} from 'react-native-paper';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { useSelector } from "react-redux"
-type Props = {
-    activeIcon: string;
-};
+import {useSelector} from 'react-redux';
 
-const array = [
-    { title: "Home", icon: "home" },
-    { title: "Listings", icon: "list" },
-    { title: "Favourites", icon: "heart" },
-    { title: "Notifications", icon: "bell" },
-];
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {RootStackParamList} from '../NavigationContainer';
+import {useNavigation} from '@react-navigation/native';
 
-export default function Footer({ activeIcon }: Props): React.JSX.Element {
-    const isDarkMode = useSelector((state)=>state.theme.isDarkMode);
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-    // Define colors based on the theme
-    const iconColor = isDarkMode ? 'white' : 'black';
-    const activeIconColor = isDarkMode ? 'yellow' : 'blue';
+export default function Footer(): React.JSX.Element {
+  const isDarkMode = useSelector((state: any) => state.theme.isDarkMode);
+  const activeIcon = useSelector((state: any) => state.activeScreen.screenName);
+  const navigation = useNavigation<NavigationProp>();
+  const array = [
+    {
+      title: 'Home',
+      icon: 'home',
+      onPress: () => {
+        navigation.navigate('Home');
+      },
+    },
+    {
+      title: 'Listings',
+      icon: 'list',
+      onPress: () => {
+        navigation.navigate('Listings');
+      },
+    },
+    {
+      title: 'Favourites',
+      icon: 'heart',
+      onPress: () => {
+        navigation.navigate('Favourites');
+      },
+    },
+    // {
+    //   title: 'Notifications',
+    //   icon: 'bell',
+    //   onPress: () => {
+    //     navigation.navigate('Notifications');
+    //   },
+    // },
+  ];
 
-    return (
-        <View>
-            {/* Render icons dynamically from the array */}
-            <View style={styles.container}>
-                {array.map((item, index) => (
-                    <View style={styles.iconContainer} key={index}>
-                        <FontAwesome 
-                            name={item.icon} 
-                            size={30} 
-                            color={activeIcon === item.title ? activeIconColor : iconColor} 
-                        />
-                        <Text style={[styles.iconText, { color: activeIcon === item.title ? activeIconColor : iconColor }]}>
-                            {item.title}
-                        </Text>
-                    </View>
-                ))}
-            </View>
-        </View>
-    );
+  const iconColor = isDarkMode ? '#C0C0C0' : '#606060';
+  const activeIconColor = isDarkMode ? '#FFD700' : '#0000FF';
+
+  return (
+    <View
+      style={[
+        styles.container,
+        {backgroundColor: isDarkMode ? '#282828' : '#E8E9EB'},
+      ]}>
+      {array.map((item, index) => (
+        <TouchableOpacity
+          style={styles.iconContainer}
+          key={index}
+          onPress={item.onPress}>
+          <FontAwesome
+            name={item.icon}
+            size={30}
+            color={
+              activeIcon === item.title ||
+              (item.title === 'Listings' && activeIcon === 'New Listing')
+                ? activeIconColor
+                : iconColor
+            }
+          />
+          <Text
+            style={[
+              styles.iconText,
+              {
+                color:
+                  activeIcon === item.title ||
+                  (item.title === 'Listings' && activeIcon === 'New Listing')
+                    ? activeIconColor
+                    : iconColor,
+              },
+            ]}>
+            {item.title}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-    },
-    iconContainer: {
-        alignItems: 'center',
-    },
-    iconText: {
-        fontSize: 12,
-    },
+  container: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  iconContainer: {
+    alignItems: 'center',
+  },
+  iconText: {
+    fontSize: 12,
+  },
 });
