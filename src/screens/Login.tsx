@@ -1,5 +1,5 @@
-import React, {Fragment, useMemo, useState} from 'react';
-import {StyleSheet, View, TouchableOpacity, Image} from 'react-native';
+import React, {Fragment, useEffect, useMemo, useState} from 'react';
+import {StyleSheet, View, TouchableOpacity, Image, Alert} from 'react-native';
 import {
   TextInput,
   MD2Colors as Colors,
@@ -17,19 +17,26 @@ import {themeToggle} from '../features/theme/themeSlice';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
 import Toast from 'react-native-toast-message';
-
+import {setUser} from '../features/userSlice';
+import {setActiveScreen} from '../features/activeScreenSlice';
+import {ENDPOINT} from '@env';
 type Props = StackScreenProps<RootStackParamList, 'Login'>;
-const API_ENDPOINT = 'http://192.168.225.161:5000';
 
 export default function LoginScreen({navigation}: Props) {
-  const isDarkMode = useSelector(state => state.theme.isDarkMode);
+  const isDarkMode = useSelector((state: any) => state.theme.isDarkMode);
   const dispatch = useDispatch();
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isLoginScreen, setIsLoginScreen] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    dispatch(setActiveScreen('Login'));
+  }, [navigation]);
   const validationSchema = useMemo(() => {
     return Yup.object().shape({
-      name: Yup.string().required('Name is required'),
+      name: isLoginScreen
+        ? Yup.string().notRequired()
+        : Yup.string().required('Name is required'),
       username: Yup.string()
         .required('Username is required')
         .matches(/^\S*$/, 'Username cannot contain spaces')
@@ -38,29 +45,31 @@ export default function LoginScreen({navigation}: Props) {
           'Username must contain only letters, numbers, or underscores',
         )
         .min(3, 'Username must be at least 3 characters long')
-        .max(15, 'Username must not exceed 15 characters'),
+        .max(25, 'Username must not exceed 25 characters'),
       password: Yup.string().required('Password is required'),
-      email: isLoginScreen
-        ? Yup.string().email().notRequired()
-        : Yup.string()
-            .email('Please enter a valid email')
-            .required('Email is required'),
-      role: isLoginScreen
-        ? Yup.string().notRequired()
-        : Yup.string()
-            .oneOf(
-              ['user', 'business'],
-              'Role must be either "user" or "business"',
-            )
-            .required('Role is required'),
+      ...(isLoginScreen
+        ? {}
+        : {
+            email: Yup.string()
+              .email('Please enter a valid email')
+              .required('Email is required'),
+            role: Yup.string()
+              .oneOf(
+                ['user', 'business'],
+                'Role must be either "user" or "business"',
+              )
+              .required('Role is required'),
+          }),
     });
   }, [isLoginScreen]);
 
   const handleLogin = async (values: any) => {
     const {username, password} = values;
+    setIsSubmitting(true);
+    console.log('Login triggered');
 
     try {
-      const response = await axios.post(`${API_ENDPOINT}/login`, {
+      const response = await axios.post(`${ENDPOINT}/login`, {
         username,
         password,
       });
@@ -68,39 +77,78 @@ export default function LoginScreen({navigation}: Props) {
       if (response.data.status === 'success') {
         Toast.show({
           type: 'success',
-          text1: 'Login Successful',
-          text2: 'Welcome back!',
+          text1: `Happy to see you again!`,
+          text2: 'Redirecting to home page, please wait...',
           position: 'top',
         });
         console.log('Login successful:', response.data);
+        dispatch(setUser(response.data));
       }
-    } catch (error) {
-      if (error.response.data.status === 'fail') {
+
+      setTimeout(() => {
+        console.log('Set Timeout');
+        navigation.replace('Home');
+      }, 3000);
+    } catch (error: any) {
+      console.error('Login error:', error);
+
+      if (axios.isAxiosError(error)) {
+        if (error.message === 'Network Error') {
+          Toast.show({
+            type: 'error',
+            text1: 'Network Error',
+            text2:
+              'Unable to reach the server. Please check your internet connection or try again later.',
+            position: 'top',
+          });
+        } else if (error.response) {
+          if (error.response.data.status === 'fail') {
+            Toast.show({
+              type: 'error',
+              text1: 'Login Failed',
+              text2:
+                error.response.data.message ||
+                'Please check your credentials and try again.',
+              position: 'top',
+            });
+          } else {
+            Toast.show({
+              type: 'error',
+              text1: 'Error',
+              text2:
+                error.response.data.message ||
+                'An unexpected error occurred, please try again later.',
+              position: 'top',
+            });
+          }
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'An unexpected error occurred, please try again later.',
+            position: 'top',
+          });
+        }
+      } else {
         Toast.show({
           type: 'error',
-          text1: 'Login Failed',
-          text2:
-            error.response.data.message ||
-            'Please check your credentials and try again.',
+          text1: 'Unexpected Error',
+          text2: 'Something went wrong. Please try again later.',
           position: 'top',
         });
-        return;
       }
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'An unexpected error occurred. Please try again later.',
-        position: 'top',
-      });
-      console.error('Login error:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleRegister = async (values: any) => {
     console.log('Register', values);
     const {username, password, email, role, name} = values;
+    setIsSubmitting(true);
+
     try {
-      const response = await axios.post(`${API_ENDPOINT}/register`, {
+      const response = await axios.post(`${ENDPOINT}/register`, {
         name,
         username,
         password,
@@ -108,25 +156,65 @@ export default function LoginScreen({navigation}: Props) {
         role,
       });
       console.log('Registration successful:', response.data);
+      dispatch(setUser(response.data));
       Toast.show({
         type: 'success',
-        text1: response.data.message,
-        text2: 'Welcome to Hostllers',
+        text1: `Welcome to Hostllers!`,
+        text2: 'Redirecting to home page, please wait...',
         position: 'top',
       });
-    } catch (error) {
+      setTimeout(() => {
+        navigation.replace('Home');
+      }, 3000);
+    } catch (error: any) {
       console.error('Registration error:', error);
-      if (error.response.data.status === 'fail') {
+      if (axios.isAxiosError(error)) {
+        if (error.message === 'Network Error') {
+          Toast.show({
+            type: 'error',
+            text1: 'Network Error',
+            text2:
+              'Unable to reach the server. Please check your internet connection or try again later.',
+            position: 'top',
+          });
+        } else if (error.response) {
+          if (error.response.data.status === 'fail') {
+            Toast.show({
+              type: 'error',
+              text1: 'Registration Failed',
+              text2:
+                error.response.data.message ||
+                'Please check your credentials and try again.',
+              position: 'top',
+            });
+          } else {
+            Toast.show({
+              type: 'error',
+              text1: 'Error',
+              text2:
+                error.response.data.message ||
+                'An unexpected error occurred, please try again later.',
+              position: 'top',
+            });
+          }
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'An unexpected error occurred, please try again later.',
+            position: 'top',
+          });
+        }
+      } else {
         Toast.show({
           type: 'error',
-          text1: 'Registration Failed',
-          text2:
-            error.response.data.message ||
-            'Please check your credentials and try again.',
+          text1: 'Unexpected Error',
+          text2: 'Something went wrong. Please try again later.',
           position: 'top',
         });
-        // return;
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -242,7 +330,7 @@ export default function LoginScreen({navigation}: Props) {
                     <TextInput
                       label="Name"
                       mode="outlined"
-                      maxLength={15}
+                      maxLength={30}
                       value={values.name}
                       onChangeText={handleChange('name')}
                       onBlur={handleBlur('name')}
@@ -268,7 +356,7 @@ export default function LoginScreen({navigation}: Props) {
                 <TextInput
                   label="Username"
                   mode="outlined"
-                  maxLength={15}
+                  maxLength={25}
                   value={values.username}
                   onChangeText={value => {
                     setFieldValue('username', value.trim());
@@ -356,13 +444,23 @@ export default function LoginScreen({navigation}: Props) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => handleSubmit()}
+              onPress={() => {
+                console.log('Pressed');
+                handleSubmit();
+              }}
+              disabled={isSubmitting}
               style={[
                 styles.submitButton,
                 {backgroundColor: isDarkMode ? Colors.blue300 : Colors.blue500},
               ]}>
               <Text style={styles.submitButtonText}>
-                {isLoginScreen ? 'Login' : 'Register'}
+                {isSubmitting
+                  ? isLoginScreen
+                    ? 'Logging...'
+                    : 'Registering...'
+                  : isLoginScreen
+                  ? 'Login'
+                  : 'Register'}
               </Text>
             </TouchableOpacity>
           </View>

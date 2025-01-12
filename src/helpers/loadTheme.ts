@@ -1,10 +1,15 @@
-import AsyncStorage from "@react-native-async-storage/async-storage"
-export default async function loadTheme () {
-    // const theme = await AsyncStorage.getItem("theme")
-    const theme = false;
-    if(theme) {
-        return JSON.parse(theme);
-    }else {
-        return;
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export default async function loadTheme() {
+  try {
+    const theme = await AsyncStorage.getItem('isDarkMode');
+    if (theme !== null) {
+      return JSON.parse(theme);
+    } else {
+      return false;
     }
+  } catch (error) {
+    console.error('Error loading theme:', error);
+    return false;
+  }
 }

@@ -1,56 +1,100 @@
-import { StyleSheet, View, Image, TextInput } from 'react-native';
-import React, { useState } from 'react';
-import FontAwesome from "react-native-vector-icons/FontAwesome";
-import LogoBlack from "../assets/logos/logo-black.png";
-import LogoWhite from "../assets/logos/logo-white.png";
-import {useSelector} from "react-redux"
+import {StyleSheet, View, TouchableOpacity} from 'react-native';
+import React from 'react';
+import {useSelector} from 'react-redux';
+import {Text, TextInput} from 'react-native-paper';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import {useNavigation} from '@react-navigation/native';
+import {StackNavigationProp} from '@react-navigation/stack';
+import {RootStackParamList} from '../NavigationContainer';
 
 export default function Header(): React.JSX.Element {
-  const [searchText, setSearchText] = useState<string>("");
-  const isDarkMode = useSelector((state)=>state.theme.isDarkMode);
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const isDarkMode = useSelector(state => state.theme.isDarkMode);
+  const locationError = useSelector(state => state.location.error);
+  const locationLoading = useSelector(state => state.location.loading);
+  const address = useSelector(state => state.location.address);
+
   return (
-    <View style={[styles.container]}>
-      <Image source={isDarkMode ? LogoWhite : LogoBlack} style={styles.logo} />
-      <View style={[styles.searchContainer, { borderColor: isDarkMode ? 'white' : 'gray' }]}>
-        <TextInput
-          placeholder='Search'
-          value={searchText}
-          onChangeText={setSearchText}
-          style={styles.input}
-          placeholderTextColor={isDarkMode? "grey" : "black"}
-        />
-        <FontAwesome name="search" size={20} color={isDarkMode ? "white" : "black"} style={styles.searchIcon} />
+    <View
+      style={[
+        styles.container,
+        {backgroundColor: isDarkMode ? '#333' : '#fff'},
+      ]}>
+      {/* Location and User Icon */}
+      <View style={styles.headerRow}>
+        <View style={{width: '80%'}}>
+          <Text
+            style={[
+              styles.locationText,
+              {
+                color: isDarkMode ? '#aaa' : '#595a63',
+                fontSize: locationError || locationLoading ? 14 : 16,
+              },
+            ]}>
+            {locationError ? locationError : address}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={() => navigation.navigate('Account')}>
+          <FontAwesome
+            name="user-circle"
+            size={30}
+            color={isDarkMode ? '#fff' : '#595a63'}
+          />
+        </TouchableOpacity>
       </View>
-      <FontAwesome name="user-circle" size={40} color={isDarkMode ? "white" : "black"} />
+
+      {/* Search Bar */}
+      <View
+        style={[
+          styles.searchContainer,
+          {borderColor: isDarkMode ? '#aaa' : '#595a63'},
+        ]}>
+        <TextInput
+          placeholder="Search"
+          placeholderTextColor={isDarkMode ? '#aaa' : '#595a63'}
+          style={[
+            styles.searchInput,
+            {
+              backgroundColor: isDarkMode ? '#444' : '#f8f8f8',
+              color: isDarkMode ? '#fff' : '#000',
+            },
+          ]}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
+    width: '100%',
+    paddingHorizontal: 10,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  locationText: {
+    textAlign: 'justify',
   },
   searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "50%",
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
     borderWidth: 1,
     borderRadius: 5,
-    paddingHorizontal: 10,
   },
-  searchIcon: {
-    marginRight: 10,
-  },
-  input: {
+  searchInput: {
     flex: 1,
     height: 40,
-  },
-  logo: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    fontSize: 16,
   },
 });
